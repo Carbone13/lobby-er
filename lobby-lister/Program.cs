@@ -1,12 +1,10 @@
-﻿using System;
-
-namespace lobby_lister
+﻿namespace LobbyEr
 {
-    class Program
+    internal static class Program
     {
-        static void Main (string[] args)
+        static void Main ()
         {
-            Console.WriteLine("Hello World!");
+            Server unused = new();
         }
     }
 }

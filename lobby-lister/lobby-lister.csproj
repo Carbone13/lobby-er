@@ -6,4 +6,8 @@
         <RootNamespace>lobby_lister</RootNamespace>
     </PropertyGroup>
 
+    <ItemGroup>
+      <PackageReference Include="LiteNetLib" Version="0.9.5" />
+    </ItemGroup>
+
 </Project>
