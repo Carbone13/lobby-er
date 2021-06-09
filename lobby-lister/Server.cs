@@ -122,6 +122,13 @@ namespace LobbyEr
             IPEndPoint hostEndpoint = targetLobby.HostPublicAddress;
             IPEndPoint clientEndpoint = who.EndPoint;
 
+            if(hostEndpoint.Address.ToString() == clientEndpoint.Address.ToString())
+            {
+                hostEndpoint.Address = IPAddress.Parse("127.0.0.1");
+                clientEndpoint.Address = IPAddress.Parse("127.0.0.1");
+            }
+
+
             ConnectTowardOrder hostOrder = new() {target = clientEndpoint};
             ConnectTowardOrder clientOrder = new() {target = hostEndpoint};
 
