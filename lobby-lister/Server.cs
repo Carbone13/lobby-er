@@ -119,7 +119,7 @@ namespace LobbyEr
                 return;
             }
             
-            IPEndPoint hostEndpoint = IPEndPoint.Parse(hostEndpoint.ToString());
+            IPEndPoint hostEndpoint = IPEndPoint.Parse(lobbyHostPeer.Endpoint.ToString());
             IPEndPoint clientEndpoint = IPEndPoint.Parse(who.EndPoint.ToString());
 
             if(hostEndpoint.Address.ToString() == clientEndpoint.Address.ToString())
