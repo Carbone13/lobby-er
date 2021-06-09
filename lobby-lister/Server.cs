@@ -121,9 +121,13 @@ namespace LobbyEr
             
             IPEndPoint hostEndpoint = IPEndPoint.Parse(lobbyHostPeer.EndPoint.ToString());
             IPEndPoint clientEndpoint = IPEndPoint.Parse(who.EndPoint.ToString());
+            IPEndPoint hostPrivate = IPEndPoint.Parse("127.0.0.1" + ":" + hostEndpoint.Port);
+            IPEndPoint clientPrivate = IPEndPoint.Parse("127.0.0.1" + ":" + clientEndpoint.Port);
 
-            ConnectTowardOrder hostOrder = new() {target = clientEndpoint};
-            ConnectTowardOrder clientOrder = new() {target = hostEndpoint};
+            bool usePrivate = hostEndpoint.Address.ToString == clientEndpoint.Address.ToString();
+
+            ConnectTowardOrder hostOrder = new() {target = clientEndpoint, privateTarget = clientPrivate, usePrivate = usePrivate};
+            ConnectTowardOrder clientOrder = new() {target = hostEndpoint, privateTarget = hostPrivate, usePrivate = usePrivat};
 
             who.Send(processor.Write(clientOrder), DeliveryMethod.ReliableOrdered);
             lobbyHostPeer.Send(processor.Write(hostOrder), DeliveryMethod.ReliableOrdered);

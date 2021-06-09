@@ -28,6 +28,8 @@ namespace Network.Packet
     public class ConnectTowardOrder
     {
         public IPEndPoint target { get; set; }
+        public IPEndPoint privateTarget { get; set; }
+        public bool usePrivate { get; set;} 
     }
 
     // Send an int linking to an error
