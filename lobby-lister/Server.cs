@@ -119,8 +119,8 @@ namespace LobbyEr
                 return;
             }
             
-            IPEndPoint hostEndpoint = targetLobby.HostPublicAddress;
-            IPEndPoint clientEndpoint = who.EndPoint;
+            IPEndPoint hostEndpoint = new IPEndPoint(targetLobby.HostPublicAddress);
+            IPEndPoint clientEndpoint = new IPEndPoint(who.EndPoint);
 
             if(hostEndpoint.Address.ToString() == clientEndpoint.Address.ToString())
             {
