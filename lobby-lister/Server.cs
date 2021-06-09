@@ -124,7 +124,7 @@ namespace LobbyEr
             IPEndPoint hostPrivate = IPEndPoint.Parse("127.0.0.1" + ":" + hostEndpoint.Port);
             IPEndPoint clientPrivate = IPEndPoint.Parse("127.0.0.1" + ":" + clientEndpoint.Port);
 
-            bool usePrivate = hostEndpoint.Address.ToString == clientEndpoint.Address.ToString();
+            bool usePrivate = hostEndpoint.Address.ToString() == clientEndpoint.Address.ToString();
 
             ConnectTowardOrder hostOrder = new() {target = clientEndpoint, privateTarget = clientPrivate, usePrivate = usePrivate};
             ConnectTowardOrder clientOrder = new() {target = hostEndpoint, privateTarget = hostPrivate, usePrivate = usePrivat};
