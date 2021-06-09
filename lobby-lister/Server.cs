@@ -127,7 +127,7 @@ namespace LobbyEr
             bool usePrivate = hostEndpoint.Address.ToString() == clientEndpoint.Address.ToString();
 
             ConnectTowardOrder hostOrder = new() {target = clientEndpoint, privateTarget = clientPrivate, usePrivate = usePrivate};
-            ConnectTowardOrder clientOrder = new() {target = hostEndpoint, privateTarget = hostPrivate, usePrivate = usePrivat};
+            ConnectTowardOrder clientOrder = new() {target = hostEndpoint, privateTarget = hostPrivate, usePrivate = usePrivate};
 
             who.Send(processor.Write(clientOrder), DeliveryMethod.ReliableOrdered);
             lobbyHostPeer.Send(processor.Write(hostOrder), DeliveryMethod.ReliableOrdered);
