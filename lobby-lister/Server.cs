@@ -114,7 +114,7 @@ namespace LobbyEr
             {
                 Console.WriteLine(">>> Unknown lobby ! Sending back an error code");
 
-                NATError error = new NATError() {error = 1};
+                Error error = new Error() {error = 1};
                 who.Send(processor.Write(error), DeliveryMethod.ReliableOrdered);
                 return;
             }
@@ -126,8 +126,8 @@ namespace LobbyEr
 
             bool usePrivate = hostEndpoint.Address.ToString() == clientEndpoint.Address.ToString();
 
-            ConnectTowardOrder hostOrder = new() {target = clientEndpoint, privateTarget = clientPrivate, usePrivate = usePrivate};
-            ConnectTowardOrder clientOrder = new() {target = hostEndpoint, privateTarget = hostPrivate, usePrivate = usePrivate};
+            ConnectTowardOrder hostOrder = new(clientPrivate, clientEndpoint, usePrivate);
+            ConnectTowardOrder clientOrder = new(hostPrivate, hostEndpoint, usePrivate);
 
             who.Send(processor.Write(clientOrder), DeliveryMethod.ReliableOrdered);
             lobbyHostPeer.Send(processor.Write(hostOrder), DeliveryMethod.ReliableOrdered);
