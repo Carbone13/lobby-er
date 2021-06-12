@@ -141,6 +141,9 @@ namespace LobbyEr
         {
             processor = new NetPacketProcessor();
             
+            processor.RegisterNestedType<PeerAddress>();
+            processor.RegisterNestedType<EndpointCouple>();
+
             processor.SubscribeReusable<Lobby, NetPeer> (OnLobbyPacketReceived);
             processor.SubscribeReusable<RequestLobbyList, NetPeer> (OnLobbyListAsked);
             processor.SubscribeReusable<JoinLobby, NetPeer> (InitializeConnectionTowardLobby);
