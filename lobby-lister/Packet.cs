@@ -11,7 +11,7 @@ namespace Network.Packet
         public IPEndPoint Public { get; set; }
         public IPEndPoint Private { get; set; }
 
-        public EndpointCouple(IPEndPoint _public, IPEndPoint _private)
+        public EndpointCouple(IPEndPoint _private, IPEndPoint _public)
         {
             Public = _public;
             Private = _private;
