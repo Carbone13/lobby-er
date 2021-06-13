@@ -117,7 +117,7 @@ namespace LobbyEr
             foreach(NetPeer host in hostedLobbies.Keys)
             {
                 Console.WriteLine(host.EndPoint + " " + ask.Target.Host.Endpoints.Public);
-                if(host.EndPoint == ask.Target.Host.Endpoints.Public)
+                if(host.EndPoint.ToString() == ask.Target.Host.Endpoints.Public.ToString())
                 {
                     lobbyHostPeer = host;
                 }
