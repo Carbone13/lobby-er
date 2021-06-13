@@ -191,7 +191,7 @@ namespace Network.Packet
     {
         public NetworkPeer Sender { get; set; }
 
-        public Lobby[] AvailableLobbies;
+        public Lobby[] AvailableLobbies { get; set; }
 
         public LobbyListAnswer (NetworkPeer _sender, Lobby[] _lobbies)
         {
