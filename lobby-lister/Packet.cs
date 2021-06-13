@@ -254,4 +254,29 @@ namespace Network.Packet
         // Empty constructor needed to serialize with PacketProcessor
         public LobbyChatMessage () {}
     }
+
+    // Ask to join a lobby, will check if password are good
+    // If connection is correct, it will then send a HolePunchAddress to the sender and to the lobby host back
+    public class AskToJoinLobby : IPacket
+    {
+        public NetworkPeer Sender { get; set; }
+        public Lobby Target { get; set; }
+        public string Password { get; set; }
+
+        public AskToJoinLobby(NetworkPeer _sender, Lobby _target, string _password)
+        {
+            Sender = _sender;
+            Target = _target;
+            Password = _password;
+        }
+
+        public bool CheckIfLegit()
+            => !Sender.HighAuthority;
+
+        public void Send(NetPeer target, DeliveryMethod method)
+            => target.Send(Program.server.processor.Write(this), method);
+
+        // Empty constructor needed to serialize with PacketProcessor
+        public AskToJoinLobby() { }
+    }
 }

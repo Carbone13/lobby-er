@@ -109,41 +109,39 @@ namespace LobbyEr
             answer.Send(asker, DeliveryMethod.ReliableOrdered);
         }
 
-        /*
-        // Client notification that he want to connect toward a specific lobby
-        // We will then send the 2 peers address to each other
-        public void InitializeConnectionTowardLobby (JoinLobby targetLobby, NetPeer who)
+        public void OnLobbyJoinAsked (AskToJoinLobby ask, NetPeer sender)
         {
-            Console.WriteLine(">>> Packet type : INITIALIZE_CONNECTION_TOWARD_LOBBY");
-            
+            Console.WriteLine(">>> Packet type : JOIN_LOBBY_ASK");
+
             NetPeer lobbyHostPeer = null;
-            foreach (NetPeer peer in hostedLobbies.Keys.Where(peer => peer.EndPoint.Equals(targetLobby.HostPublicAddress)))
-                lobbyHostPeer = peer;
+            foreach(NetPeer host in hostedLobbies.Keys)
+            {
+                if(host.EndPoint == ask.Target.Host.Endpoints.Public)
+                {
+                    lobbyHostPeer = host;
+                }
+            }
 
             if (lobbyHostPeer == null)
             {
                 Console.WriteLine(">>> Unknown lobby ! Sending back an error code");
-
-                Error error = new Error() {error = 1};
-                who.Send(processor.Write(error), DeliveryMethod.ReliableOrdered);
+                // TODO
                 return;
             }
-            
+
             IPEndPoint hostEndpoint = IPEndPoint.Parse(lobbyHostPeer.EndPoint.ToString());
-            IPEndPoint clientEndpoint = IPEndPoint.Parse(who.EndPoint.ToString());
-            IPEndPoint hostPrivate = IPEndPoint.Parse("127.0.0.1" + ":" + hostEndpoint.Port);
-            IPEndPoint clientPrivate = IPEndPoint.Parse("127.0.0.1" + ":" + clientEndpoint.Port);
+            IPEndPoint clientEndpoint = IPEndPoint.Parse(sender.EndPoint.ToString());
 
             bool usePrivate = hostEndpoint.Address.ToString() == clientEndpoint.Address.ToString();
 
-            ConnectTowardOrder hostOrder = new(clientPrivate, clientEndpoint, usePrivate);
-            ConnectTowardOrder clientOrder = new(hostPrivate, hostEndpoint, usePrivate);
+            HolePunchAddress hostHPAddress = new HolePunchAddress(Us, ask.Target.Host, usePrivate);
+            HolePunchAddress clientHPAddress = new HolePunchAddress(Us, ask.Sender, usePrivate);
 
-            who.Send(processor.Write(clientOrder), DeliveryMethod.ReliableOrdered);
-            lobbyHostPeer.Send(processor.Write(hostOrder), DeliveryMethod.ReliableOrdered);
-            
+            hostHPAddress.Send(sender, DeliveryMethod.ReliableOrdered);
+            clientHPAddress.Send(lobbyHostPeer, DeliveryMethod.ReliableOrdered);
+
             Console.WriteLine(">>> Successfully sent end points to client & host.");
-        }*/
+        }
         
         #region Initialization
 
@@ -157,7 +155,7 @@ namespace LobbyEr
 
             processor.SubscribeReusable<RegisterAndUpdateLobbyState, NetPeer> (OnLobbyPacketReceived);
             processor.SubscribeReusable<QueryLobbyList, NetPeer> (OnLobbyListAsked);
-            //processor.SubscribeReusable<JoinLobby, NetPeer> (InitializeConnectionTowardLobby);
+            processor.SubscribeReusable<AskToJoinLobby, NetPeer>(OnLobbyJoinAsked);
         }
 
         private void StartNetworkThread ()
