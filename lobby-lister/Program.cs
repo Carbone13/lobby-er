@@ -1,10 +1,10 @@
-﻿namespace LobbyEr
+﻿using LobbyEr;
+
+static class Program
 {
-    internal static class Program
+    public static Server server;
+    static void Main ()
     {
-        static void Main ()
-        {
-            Server unused = new();
-        }
+        server = new();
     }
 }

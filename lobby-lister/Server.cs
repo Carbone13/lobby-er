@@ -15,13 +15,20 @@ namespace LobbyEr
         public const int PORT = 3456;
 
         private NetManager socket;
-        private NetPacketProcessor processor;
+        public NetPacketProcessor processor;
 
         private Dictionary<NetPeer, Lobby> hostedLobbies = new();
         private List<NetPeer> connectedPeers = new();
+
+        public NetworkPeer Us;
         
         public Server ()
         {
+            Us = new NetworkPeer("Lobby-Er",
+                new EndpointCouple(new IPEndPoint(IPAddress.Parse("90.76.187.136"), 3456), new IPEndPoint(IPAddress.Parse("90.76.187.136"), 3456)),
+                true
+                );
+
             Console.WriteLine("--> Starting Lobby-er...");
             Console.WriteLine("Trying to host on " + ADDRESS + ":" + PORT);
             
@@ -43,6 +50,8 @@ namespace LobbyEr
             listener.PeerConnectedEvent += peer =>
             {
                 Console.WriteLine(">> Confirmed connection with " + peer.EndPoint);
+                PublicAddress address = new PublicAddress(Us, peer.EndPoint);
+                address.Send(peer, DeliveryMethod.ReliableOrdered);
                 connectedPeers.Add(peer);
             };
 
@@ -68,38 +77,39 @@ namespace LobbyEr
         
         // When someone send us a packet containing lobby informations
         // It can be a register (= first packet) or and update of the lobby state 
-        public void OnLobbyPacketReceived (Lobby lobby, NetPeer sender)
+        public void OnLobbyPacketReceived (RegisterAndUpdateLobbyState lobby, NetPeer sender)
         {
             if (hostedLobbies.ContainsKey(sender))
             {
                 // Lobby State update 
                 Console.WriteLine(">>> Packet type : LOBBY_UPDATE");
                 
-                lobby.HostPublicAddress = sender.EndPoint;
-                hostedLobbies[sender] = lobby;
+                //lobby.HostPublicAddress = sender.EndPoint;
+                hostedLobbies[sender] = lobby.Lobby;
             }
             else
             {
                 // New lobby
                 Console.WriteLine(">>> Packet type : LOBBY_REGISTER");
 
-                lobby.HostPublicAddress = sender.EndPoint;
-                hostedLobbies.Add(sender, lobby);
+                //lobby.HostPublicAddress = sender.EndPoint;
+                hostedLobbies.Add(sender, lobby.Lobby);
             }
         }
 
         // When someone ask for the list of available lobbies.
-        public void OnLobbyListAsked (RequestLobbyList request, NetPeer asker)
+        public void OnLobbyListAsked (QueryLobbyList request, NetPeer asker)
         {
             Console.WriteLine(">>> Packet type : LOBBY_LIST_QUERY");
             Console.WriteLine(">>> Sending back informations about " + hostedLobbies.Values.Count + " lobbies.");
-            // We send him every available lobby back, 1 per 1
-            foreach (Lobby lobby in hostedLobbies.Values)
-            {
-                asker.Send(processor.Write(lobby), DeliveryMethod.ReliableOrdered);
-            }
+            // We send him every available lobby back
+
+            LobbyListAnswer answer = new LobbyListAnswer(Us, hostedLobbies.Values.ToArray());
+
+            answer.Send(asker, DeliveryMethod.ReliableOrdered);
         }
 
+        /*
         // Client notification that he want to connect toward a specific lobby
         // We will then send the 2 peers address to each other
         public void InitializeConnectionTowardLobby (JoinLobby targetLobby, NetPeer who)
@@ -133,20 +143,21 @@ namespace LobbyEr
             lobbyHostPeer.Send(processor.Write(hostOrder), DeliveryMethod.ReliableOrdered);
             
             Console.WriteLine(">>> Successfully sent end points to client & host.");
-        }
+        }*/
         
         #region Initialization
 
         private void SetupPacketProcessing ()
         {
             processor = new NetPacketProcessor();
-            
-            processor.RegisterNestedType<PeerAddress>();
-            processor.RegisterNestedType<EndpointCouple>();
 
-            processor.SubscribeReusable<Lobby, NetPeer> (OnLobbyPacketReceived);
-            processor.SubscribeReusable<RequestLobbyList, NetPeer> (OnLobbyListAsked);
-            processor.SubscribeReusable<JoinLobby, NetPeer> (InitializeConnectionTowardLobby);
+            processor.RegisterNestedType<NetworkPeer>();
+            processor.RegisterNestedType<EndpointCouple>();
+            processor.RegisterNestedType<Lobby>();
+
+            processor.SubscribeReusable<RegisterAndUpdateLobbyState, NetPeer> (OnLobbyPacketReceived);
+            processor.SubscribeReusable<QueryLobbyList, NetPeer> (OnLobbyListAsked);
+            //processor.SubscribeReusable<JoinLobby, NetPeer> (InitializeConnectionTowardLobby);
         }
 
         private void StartNetworkThread ()
