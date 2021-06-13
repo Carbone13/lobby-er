@@ -214,7 +214,7 @@ namespace Network.Packet
     {
         public NetworkPeer Sender { get; set; }
 
-        public Lobby Lobby;
+        public Lobby Lobby { get; set; }
 
         public RegisterAndUpdateLobbyState (NetworkPeer _sender, Lobby _lobby)
         {
