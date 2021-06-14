@@ -6,7 +6,6 @@ using System.Collections.Generic;
 // NOTE: Lobby-Er refers to https://github.com/Carbone13/lobby-er
 namespace Network.Packet
 {
-    #region Global
     // Interface packet, every packets need these fields
     public interface IPacket
     {
@@ -14,61 +13,6 @@ namespace Network.Packet
 
         bool CheckIfLegit ();
         void Send(NetPeer target, DeliveryMethod method);
-    }
-
-    // Represent someone in the network
-    public struct NetworkPeer : INetSerializable
-    {
-        public string Nickname { get; set; }  // Nickname
-        public EndpointCouple Endpoints { get; set; } // Addresses
-        public bool HighAuthority { get; set; } // Does it has high authority ? (= is it an Host or the Lobby-Er) ?
-
-        public NetworkPeer (string _name, EndpointCouple _addresses, bool _authority = false)
-        {
-            Nickname = _name;
-            Endpoints = _addresses;
-            HighAuthority = _authority;
-        }
-
-        public void Serialize (NetDataWriter writer)
-        {
-            writer.Put(Nickname);
-            writer.Put(Endpoints);
-            writer.Put(HighAuthority);
-        }
-
-        public void Deserialize (NetDataReader reader)
-        {
-            Nickname = reader.GetString();
-            Endpoints = reader.Get<EndpointCouple>();
-            HighAuthority = reader.GetBool();
-        }
-    }
-
-    // Represent both the public and the private address of a NetworkPeer (or anything else)
-    // Public should be used in remote context, and private in lan context
-    public struct EndpointCouple : INetSerializable
-    {
-        public IPEndPoint Public { get; set;}
-        public IPEndPoint Private { get; set; }
-
-        public EndpointCouple (IPEndPoint _public, IPEndPoint _private)
-        {
-            Public = _public;
-            Private = _private;
-        }
-
-        public void Serialize (NetDataWriter writer)
-        {
-            writer.Put(Public);
-            writer.Put(Private);
-        }
-
-        public void Deserialize (NetDataReader reader)
-        {
-            Public = reader.GetNetEndPoint();
-            Private = reader.GetNetEndPoint();
-        }
     }
 
     // Represent a Lobby
@@ -117,32 +61,6 @@ namespace Network.Packet
                 ConnectedPeers.Add(reader.Get<NetworkPeer>());
             }
         }
-    }
-    #endregion
-
-    // Give you an address you should connect to, this can be the address of anyone
-    public class HolePunchAddress : IPacket
-    {
-        public NetworkPeer Sender { get; set; }
-
-        public NetworkPeer Target { get; set;}
-        public bool UsePrivate { get; set; }
-
-        public HolePunchAddress (NetworkPeer _sender, NetworkPeer _target, bool _private)
-        {
-            Sender = _sender;
-            Target = _target;
-            UsePrivate = _private;
-        }
-
-        public bool CheckIfLegit () 
-            => Sender.HighAuthority;
-
-        public void Send (NetPeer target, DeliveryMethod method)
-            => target.Send(Program.server.processor.Write(this), method);
-
-        // Empty constructor needed to serialize with PacketProcessor
-        public HolePunchAddress () {}
     }
 
     public class PublicAddress : IPacket
@@ -231,52 +149,5 @@ namespace Network.Packet
 
         // Empty constructor needed to serialize with PacketProcessor
         public RegisterAndUpdateLobbyState () {}
-    }
-
-    public class LobbyChatMessage : IPacket
-    {
-        public NetworkPeer Sender { get; set; }
-
-        public string Message { get; set; }
-
-        public LobbyChatMessage (NetworkPeer _sender, string _message)
-        {
-            Sender = _sender;
-            Message = _message;
-        }
-
-        public bool CheckIfLegit () 
-            => true;
-
-        public void Send (NetPeer target, DeliveryMethod method) 
-            => target.Send(Program.server.processor.Write(this), method);
-
-        // Empty constructor needed to serialize with PacketProcessor
-        public LobbyChatMessage () {}
-    }
-
-    // Ask to join a lobby, will check if password are good
-    // If connection is correct, it will then send a HolePunchAddress to the sender and to the lobby host back
-    public class AskToJoinLobby : IPacket
-    {
-        public NetworkPeer Sender { get; set; }
-        public Lobby Target { get; set; }
-        public string Password { get; set; }
-
-        public AskToJoinLobby(NetworkPeer _sender, Lobby _target, string _password)
-        {
-            Sender = _sender;
-            Target = _target;
-            Password = _password;
-        }
-
-        public bool CheckIfLegit()
-            => !Sender.HighAuthority;
-
-        public void Send(NetPeer target, DeliveryMethod method)
-            => target.Send(Program.server.processor.Write(this), method);
-
-        // Empty constructor needed to serialize with PacketProcessor
-        public AskToJoinLobby() { }
     }
 }

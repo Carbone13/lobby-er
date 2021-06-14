@@ -5,6 +5,8 @@ using System.Net;
 using System.Threading;
 using LiteNetLib;
 using LiteNetLib.Utils;
+using Network;
+using Network.HolePunching.Packet;
 using Network.Packet;
 
 namespace LobbyEr
@@ -30,7 +32,7 @@ namespace LobbyEr
                 );
 
             Console.WriteLine("--> Starting Lobby-er...");
-            Console.WriteLine("Trying to host on " + ADDRESS + ":" + PORT);
+            Console.WriteLine("Trying to host on " + "90.76.187.136" + ":" + PORT);
             
             EventBasedNetListener listener = new();
             socket = new NetManager(listener);
@@ -43,14 +45,13 @@ namespace LobbyEr
             
             listener.ConnectionRequestEvent += request =>
             {
-                Console.WriteLine("> Received a connection request from " + request.RemoteEndPoint + " STATUS: ACCEPTED");
                 request.Accept();
             };
             
             listener.PeerConnectedEvent += peer =>
             {
                 Console.WriteLine(">> Confirmed connection with " + peer.EndPoint);
-                PublicAddress address = new PublicAddress(Us, peer.EndPoint);
+                PublicAddress address = new(Us, peer.EndPoint);
                 address.Send(peer, DeliveryMethod.ReliableOrdered);
                 connectedPeers.Add(peer);
             };
@@ -109,39 +110,31 @@ namespace LobbyEr
             answer.Send(asker, DeliveryMethod.ReliableOrdered);
         }
 
-        public void OnLobbyJoinAsked (AskToJoinLobby ask, NetPeer sender)
+        public void OnRendezVousSetupAsked (AskRendezVous ask, NetPeer sender)
         {
-            Console.WriteLine(">>> Packet type : JOIN_LOBBY_ASK");
+            Console.WriteLine(">>> Packet type : RENDEZ_VOUS_ASK");
 
-            NetPeer lobbyHostPeer = null;
-            foreach(NetPeer host in hostedLobbies.Keys)
-            {
-                Console.WriteLine(host.EndPoint + " " + ask.Target.Host.Endpoints.Public);
-                if(host.EndPoint.ToString() == ask.Target.Host.Endpoints.Public.ToString())
-                {
-                    lobbyHostPeer = host;
-                }
-            }
+            NetPeer peerOne = GetPeer(ask.You);
+            NetPeer peerTwo = GetPeer(ask.Target);
 
-            if (lobbyHostPeer == null)
-            {
-                Console.WriteLine(">>> Unknown lobby ! Sending back an error code");
-                // TODO
-                return;
-            }
-
-            IPEndPoint hostEndpoint = IPEndPoint.Parse(lobbyHostPeer.EndPoint.ToString());
-            IPEndPoint clientEndpoint = IPEndPoint.Parse(sender.EndPoint.ToString());
-
-            bool usePrivate = hostEndpoint.Address.ToString() == clientEndpoint.Address.ToString();
-
-            HolePunchAddress hostHPAddress = new HolePunchAddress(Us, ask.Target.Host, usePrivate);
-            HolePunchAddress clientHPAddress = new HolePunchAddress(Us, ask.Sender, usePrivate);
-
-            hostHPAddress.Send(sender, DeliveryMethod.ReliableOrdered);
-            clientHPAddress.Send(lobbyHostPeer, DeliveryMethod.ReliableOrdered);
+            RendezVousInvitation invitationToOne = new (Us, ask.You);
+            RendezVousInvitation invitationToTwo = new (Us, ask.Target);
+            
+            invitationToOne.Send(peerOne, DeliveryMethod.ReliableOrdered);
+            invitationToTwo.Send(peerTwo, DeliveryMethod.ReliableOrdered);
 
             Console.WriteLine(">>> Successfully sent end points to client & host.");
+        }
+        
+        private NetPeer GetPeer (NetworkPeer peer)
+        {
+            foreach (NetPeer _peer in socket.ConnectedPeerList)
+            {
+                if (peer.Endpoints.CorrespondTo(_peer.EndPoint))
+                    return _peer;
+            }
+
+            return null;
         }
         
         #region Initialization
@@ -156,7 +149,7 @@ namespace LobbyEr
 
             processor.SubscribeReusable<RegisterAndUpdateLobbyState, NetPeer> (OnLobbyPacketReceived);
             processor.SubscribeReusable<QueryLobbyList, NetPeer> (OnLobbyListAsked);
-            processor.SubscribeReusable<AskToJoinLobby, NetPeer>(OnLobbyJoinAsked);
+            processor.SubscribeReusable<AskRendezVous, NetPeer>(OnRendezVousSetupAsked);
         }
 
         private void StartNetworkThread ()
