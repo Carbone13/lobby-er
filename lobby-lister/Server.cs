@@ -117,8 +117,8 @@ namespace LobbyEr
             NetPeer peerOne = GetPeer(ask.You);
             NetPeer peerTwo = GetPeer(ask.Target);
 
-            RendezVousInvitation invitationToOne = new (Us, ask.You);
-            RendezVousInvitation invitationToTwo = new (Us, ask.Target);
+            RendezVousInvitation invitationToOne = new (Us, ask.Target);
+            RendezVousInvitation invitationToTwo = new (Us, ask.You);
             
             invitationToOne.Send(peerOne, DeliveryMethod.ReliableOrdered);
             invitationToTwo.Send(peerTwo, DeliveryMethod.ReliableOrdered);
