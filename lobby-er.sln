@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "lobby-lister", "lobby-lister\lobby-lister.csproj", "{5C4F589B-A85F-4314-835B-BD6A0F3C74A5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "lobby-er", "lobby-er\lobby-er.csproj", "{5C4F589B-A85F-4314-835B-BD6A0F3C74A5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -4,6 +4,8 @@
         <OutputType>Exe</OutputType>
         <TargetFramework>net5.0</TargetFramework>
         <RootNamespace>lobby_lister</RootNamespace>
+        <Company>Studio Treize</Company>
+        <Product>Lobby-Er</Product>
     </PropertyGroup>
 
     <ItemGroup>

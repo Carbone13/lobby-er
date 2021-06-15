@@ -4,7 +4,7 @@ using System.Net;
 using System;
 
 // Hole punching packets
-namespace Network.HolePunching.Packet
+namespace Network.HolePunching
 {
     /// <summary>
     /// Ask the Lobby-Er to setup a Rendez-Vous between you and the

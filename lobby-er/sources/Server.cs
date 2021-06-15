@@ -6,7 +6,7 @@ using System.Threading;
 using LiteNetLib;
 using LiteNetLib.Utils;
 using Network;
-using Network.HolePunching.Packet;
+using Network.HolePunching;
 using Network.Packet;
 
 namespace LobbyEr
