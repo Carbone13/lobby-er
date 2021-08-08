@@ -2,172 +2,147 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Tasks.Dataflow;
+using Bonebreaker.Net;
 using LiteNetLib;
 using LiteNetLib.Utils;
-using Network;
-using Network.HolePunching;
-using Network.Packet;
+using static System.Console;
 
 namespace LobbyEr
 {
-    public class Server
+    public class Server : INetEventListener
     {
+        private const string KEY = "bb_a_v0.07";
         public const string ADDRESS = "0.0.0.0";
         public const int PORT = 3456;
-
-        private NetManager socket;
-        public NetPacketProcessor processor;
-
-        private Dictionary<NetPeer, Lobby> hostedLobbies = new();
-        private List<NetPeer> connectedPeers = new();
-
-        public NetworkPeer Us;
         
+        public NetManager client;
+
         public Server ()
         {
-            Us = new NetworkPeer("Lobby-Er",
-                new EndpointCouple(new IPEndPoint(IPAddress.Parse("90.76.187.136"), 3456), new IPEndPoint(IPAddress.Parse("90.76.187.136"), 3456)),
-                true
-                );
-
-            Console.WriteLine("--> Starting Lobby-er...");
-            Console.WriteLine("Trying to host on " + "90.76.187.136" + ":" + PORT);
-            
-            EventBasedNetListener listener = new();
-            socket = new NetManager(listener);
-            socket.Start(3456);
-            
-            SetupPacketProcessing();
-            StartNetworkThread();
-            
-            Console.WriteLine(">> Up and Running !");
-            
-            listener.ConnectionRequestEvent += request =>
-            {
-                request.Accept();
-            };
-            
-            listener.PeerConnectedEvent += peer =>
-            {
-                Console.WriteLine(">> Confirmed connection with " + peer.EndPoint);
-                PublicAddress address = new(Us, peer.EndPoint);
-                address.Send(peer, DeliveryMethod.ReliableOrdered);
-                connectedPeers.Add(peer);
-            };
-
-            listener.PeerDisconnectedEvent += (peer, _) =>
-            {
-                Console.WriteLine(">> Disconnection from " + peer.EndPoint + " cleaning up...");
-                Console.WriteLine(">>> Removed from peer list");
-                connectedPeers.Remove(peer);
-
-                if (hostedLobbies.ContainsKey(peer))
-                {
-                    hostedLobbies.Remove(peer);
-                    Console.WriteLine(">>> Was hosting a lobby, cleaned it up.");
-                }
-            };
-            
-            listener.NetworkReceiveEvent += (fromPeer, dataReader, _) =>
-            {
-                Console.WriteLine(">> Received a packet from " + fromPeer.EndPoint + " processing...");
-                processor.ReadAllPackets(dataReader, fromPeer);
-            };
-        }
-        
-        // When someone send us a packet containing lobby informations
-        // It can be a register (= first packet) or and update of the lobby state 
-        public void OnLobbyPacketReceived (RegisterAndUpdateLobbyState lobby, NetPeer sender)
-        {
-            if (hostedLobbies.ContainsKey(sender))
-            {
-                // Lobby State update 
-                Console.WriteLine(">>> Packet type : LOBBY_UPDATE");
-                
-                //lobby.HostPublicAddress = sender.EndPoint;
-                hostedLobbies[sender] = lobby.Lobby;
-            }
-            else
-            {
-                // New lobby
-                Console.WriteLine(">>> Packet type : LOBBY_REGISTER");
-
-                //lobby.HostPublicAddress = sender.EndPoint;
-                hostedLobbies.Add(sender, lobby.Lobby);
-            }
+            WriteLine("> Booting up server...");
+            client = new NetManager(this);
+            client.Start(PORT);
+    
+            WriteLine(" > Up and running !");
+            Thread pollingThread = new (Poll);
+            pollingThread.Start();
         }
 
-        // When someone ask for the list of available lobbies.
-        public void OnLobbyListAsked (QueryLobbyList request, NetPeer asker)
+        public void Poll ()
         {
-            Console.WriteLine(">>> Packet type : LOBBY_LIST_QUERY");
-            Console.WriteLine(">>> Sending back informations about " + hostedLobbies.Values.Count + " lobbies.");
-            // We send him every available lobby back
-
-            LobbyListAnswer answer = new LobbyListAnswer(Us, hostedLobbies.Values.ToArray());
-
-            answer.Send(asker, DeliveryMethod.ReliableOrdered);
-        }
-
-        public void OnRendezVousSetupAsked (AskRendezVous ask, NetPeer sender)
-        {
-            Console.WriteLine(">>> Packet type : RENDEZ_VOUS_ASK");
-
-            NetPeer peerOne = GetPeer(ask.You);
-            NetPeer peerTwo = GetPeer(ask.Target);
-
-            RendezVousInvitation invitationToOne = new (Us, ask.Target);
-            RendezVousInvitation invitationToTwo = new (Us, ask.You);
-            
-            invitationToOne.Send(peerOne, DeliveryMethod.ReliableOrdered);
-            invitationToTwo.Send(peerTwo, DeliveryMethod.ReliableOrdered);
-
-            Console.WriteLine(">>> Successfully sent end points to client & host.");
-        }
-        
-        private NetPeer GetPeer (NetworkPeer peer)
-        {
-            foreach (NetPeer _peer in socket.ConnectedPeerList)
+            while (true)
             {
-                if (peer.Endpoints.CorrespondTo(_peer.EndPoint))
-                    return _peer;
-            }
-
-            return null;
-        }
-        
-        #region Initialization
-
-        private void SetupPacketProcessing ()
-        {
-            processor = new NetPacketProcessor();
-
-            processor.RegisterNestedType<NetworkPeer>();
-            processor.RegisterNestedType<EndpointCouple>();
-            processor.RegisterNestedType<Lobby>();
-
-            processor.SubscribeReusable<RegisterAndUpdateLobbyState, NetPeer> (OnLobbyPacketReceived);
-            processor.SubscribeReusable<QueryLobbyList, NetPeer> (OnLobbyListAsked);
-            processor.SubscribeReusable<AskRendezVous, NetPeer>(OnRendezVousSetupAsked);
-        }
-
-        private void StartNetworkThread ()
-        {
-            Thread _netThread = new(NetworkLoop);
-            _netThread.Start();
-        }
-        
-        public void NetworkLoop ()
-        {
-            while (!Console.KeyAvailable)
-            {
-                socket.PollEvents();
+                client.PollEvents();
                 Thread.Sleep(50);
             }
-
-            socket.Stop();
         }
-        #endregion
+        
+        public static void SendToPeer (INetSerializable packet, NetPeer peer)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            packet.Serialize(writer);
+            peer.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+
+        public void OnPeerConnected (NetPeer peer)
+        {
+            WriteLine("> New peer connected: " + peer.EndPoint);
+        }
+
+        public void OnPeerDisconnected (NetPeer peer, DisconnectInfo disconnectInfo)
+        {
+            WriteLine("> Peer disconnected: " + peer.EndPoint);
+        }
+
+        public void OnNetworkError (IPEndPoint endPoint, SocketError socketError)
+        {
+        }
+
+        public void OnNetworkReceive (NetPeer peer, NetPacketReader reader, DeliveryMethod deliveryMethod)
+        {
+            // get packet header
+            PacketsList header = (PacketsList)reader.GetInt();
+            WriteLine(header);
+            switch (header)
+            {
+                case PacketsList.ACCOUNT_CREATE:
+                    CreateAccount packet = new CreateAccount();
+                    packet.Deserialize(reader);
+
+                    EmptyOperationResult result = new EmptyOperationResult();
+                    result.OperationID = packet.OperationID;
+                    result.ErrorCode = 1;
+                    if (SQL.CheckIfEmailIsAlreadyInUse(packet.Account.Email))
+                    {
+                        result.ErrorCode = 2;
+                        SendToPeer(result, peer);
+                        break;
+                    }
+
+                    if (SQL.CheckIfUsernameIsAlreadyInUse(packet.Account.Username))
+                    {
+                        result.ErrorCode = 3;
+                        SendToPeer(result, peer);
+                        break;
+                    }
+                    
+                    SQL.RegisterAccount(packet.Account);
+                    SendToPeer(result, peer);
+                    break;
+                case PacketsList.ACCOUNT_LOGIN:
+                    LoginAccount log = new ();
+                    log.Deserialize(reader);
+
+                    Account account = SQL.QueryAccountByEmail(log.Credential);
+                    
+                    AccountLoginResult loginResult = new ();
+                    loginResult.OperationID = log.OperationID;
+                    loginResult.Account = new Account() { ID = -1 };
+                    
+                    if (account == null)
+                    {
+                        loginResult.ErrorCode = 5;
+                        SendToPeer(loginResult, peer);
+                        break;
+                    }
+
+                    if (account.Password == log.Password)
+                    {
+                        loginResult.ErrorCode = 1;
+                        loginResult.Account = account;
+                        SendToPeer(loginResult, peer);
+                        break;
+                    }
+                    else
+                    {
+                        loginResult.ErrorCode = 6;
+                        SendToPeer(loginResult, peer);
+                        break;
+                    }
+
+                    break;
+            }
+            
+            reader.Recycle();
+        }
+
+        public void OnNetworkReceiveUnconnected (IPEndPoint remoteEndPoint, NetPacketReader reader,
+            UnconnectedMessageType messageType)
+        {
+            
+        }
+
+        public void OnNetworkLatencyUpdate (NetPeer peer, int latency)
+        {
+            
+        }
+
+        public void OnConnectionRequest (ConnectionRequest request)
+        {
+            request.AcceptIfKey(KEY);
+        }
     }
 }
